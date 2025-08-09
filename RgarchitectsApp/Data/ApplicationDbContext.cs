@@ -1,0 +1,1 @@
+using Microsoft.EntityFrameworkCore; using RgarchitectsApp.Models; namespace RgarchitectsApp.Data { public class ApplicationDbContext : DbContext { public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {} public DbSet<User> Users => Set<User>(); } }
