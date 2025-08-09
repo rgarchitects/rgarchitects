@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter, Form, FormGroup, Label, Input, Table } from 'reactstrap';
 
 const initialForm = { id: 0, firstName: '', lastName: '', email: '', isManager: false };
@@ -10,12 +10,21 @@ export function Users() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
+  const [error, setError] = useState('');
+
   const loadUsers = async () => {
     setLoading(true);
-    const resp = await fetch('/api/users');
-    const data = await resp.json();
-    setUsers(data);
-    setLoading(false);
+    setError('');
+    try {
+      const resp = await fetch('/api/users');
+      if (!resp.ok) throw new Error(`Load failed (${resp.status})`);
+      const data = await resp.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setError(e.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadUsers(); }, []);
@@ -27,8 +36,14 @@ export function Users() {
 
   const onDelete = async (id) => {
     if (!window.confirm('Delete this user?')) return;
-    await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    await loadUsers();
+    setError('');
+    try {
+      const resp = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Delete failed');
+      await loadUsers();
+    } catch (e) {
+      setError(e.message || 'Delete failed');
+    }
   };
 
   const onChange = (e) => {
@@ -39,12 +54,23 @@ export function Users() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
     const method = form.id && form.id !== 0 ? 'PUT' : 'POST';
     const url = method === 'POST' ? '/api/users' : `/api/users/${form.id}`;
-    await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: form.id, firstName: form.firstName, lastName: form.lastName, email: form.email, isManager: form.isManager }) });
-    setSaving(false);
-    setModalOpen(false);
-    await loadUsers();
+    try {
+      const resp = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: form.id, firstName: form.firstName, lastName: form.lastName, email: form.email, isManager: form.isManager })
+      });
+      if (!resp.ok) throw new Error(`${method} failed (${resp.status})`);
+      setModalOpen(false);
+      await loadUsers();
+    } catch (e) {
+      setError(e.message || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -54,6 +80,9 @@ export function Users() {
         <Button color="primary" onClick={onAdd}>Add User</Button>
       </div>
 
+      {error && (
+        <div className="alert alert-danger" role="alert">{error}</div>
+      )}
       {loading ? (
         <p>Loading...</p>
       ) : (

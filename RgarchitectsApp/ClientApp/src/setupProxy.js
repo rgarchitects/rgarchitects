@@ -1,8 +1,10 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { env } = require('process');
 
-const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}` :
-  env.ASPNETCORE_URLS ? env.ASPNETCORE_URLS.split(';')[0] : 'http://localhost:2630';
+// Prefer explicit API URL, then standard ASP.NET Core envs, then fallback to the port we run locally
+const target = env.REACT_APP_API_URL
+  || (env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`
+  : (env.ASPNETCORE_URLS ? env.ASPNETCORE_URLS.split(';')[0] : 'http://localhost:5170'));
 
 const context = [
   "/weatherforecast",
